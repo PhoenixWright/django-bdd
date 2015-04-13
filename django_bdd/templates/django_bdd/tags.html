@@ -1,0 +1,33 @@
+{% load django_bdd_tags %}
+
+<table class="table table-striped table-hover ">
+    <thead>
+        <th>
+            <h3>
+                Tags
+                <!-- passing a blank value like this effectively maintains all params except the tag one, which gets removed from the url params -->
+                <form class="pull-right" method="link" action="?{% url_search_parameter_update key='tag' value='' %}">
+                    <input id="all-tags-button" class="btn" type="submit" value="All">
+                </form>
+            </h3>
+        </th>
+    </thead>
+    <tbody>
+        {% for tag in tag_list %}
+            <tr>
+            {% if tag.name in searched_tags %}
+                <td class="info">
+            {% else %}
+                <td>
+            {% endif %}
+                    <a href="?{% url_search_parameter_update key='tag' value=tag.name %}">{{ tag.name }}</a>
+
+                    <!-- if the tag is already part of the search, include an X button to remove it -->
+                    {% if tag.name in searched_tags %}
+                        <a class="close" href="?{% url_search_parameter_update key='tag' value=tag.name %}">X</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

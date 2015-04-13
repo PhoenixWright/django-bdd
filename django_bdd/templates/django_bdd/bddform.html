@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block head %}
+{% load staticfiles %}
+<script src="{% static "js/tiny_mce/tinymce.js" %}"></script>
+<script type="text/javascript">
+$(window).ready(function() {
+    // tiny mce might not be fully loaded at this time, so poll for it
+    var ts = 0;
+    function load_steps() {
+        if (tinyMCE == null || tinyMCE.settings == null) {
+            return;
+        }
+        clearInterval(ts);
+
+        // inject the bdd steps
+        tinyMCE.settings.mentions.source = [
+            {% for step in steps %}
+            {name: '{{step}}'},
+            {% endfor %}
+        ];
+    }
+
+    ts = setInterval(load_steps, 500);
+});
+</script>
+<style type="text/css">
+</style>
+<link rel="stylesheet" href="{% static "css/bdd.css" %}" />
+{% endblock %}
+
+{% block title %}
+Scenario
+{% endblock %}
+
+{% block content %}
+    <h2>{{ title }}</h2>
+    <form class="form-horizontal" method="post">{% csrf_token %}
+        {{ form.as_p }}
+        <p>Protip: Use '@' to bring up the auto-complete menu!</p>
+        <input id="submit-scenario-button" class="btn btn-primary" type="submit" value="Submit" />
+    </form>
+{% endblock %}

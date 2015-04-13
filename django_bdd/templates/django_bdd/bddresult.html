@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load render_table from django_tables2 %}
+
+{% block head %}
+{% load staticfiles %}
+<!-- if test is still running, then auto refresh so user will see latest results -->
+{% if test and test_run %}
+{% if test_run.status == 'running' or test_run.status == 'new' %}
+<meta http-equiv="refresh" content="5" >
+{% endif %}
+{% endif %}
+<link rel='stylesheet' href='{% static "css/bdd.css" %}'>
+<style type="text/css">
+    .popover {
+        max-width: 400px;
+        max-height: 600px;
+    }
+
+    .popover-screenshot {
+        max-width: 100%;
+        max-height: 100%;
+    }
+</style>
+<script type='text/javascript' src='{% static "js/jquery.scrollTo.js" %}'></script>
+<script type='text/javascript'>
+$(window).ready(function() {
+var screenbox = $('.screenshots');
+// the last clicked/selected step
+// when we hover out of the entire steps block, the screenshot shovler
+// will scroll back to this element. otherwise, the shovler will stay
+// on whatever was hovered on last
+// by having this feature, we can get past that annoying behavior of
+// stray and unintended mouse hovers when moving the cursor out
+var selected = null;
+
+// for the given step, try to find its matching screenshot by using the pair_id
+// attribute
+function findStepScreen(step) {
+    var pair_id = $(step).attr('pair_id');
+    if (!pair_id) return;
+    return $('.screenshot[pair_id=' + pair_id + ']');
+}
+
+// simple wrapper around the jquery scroll to plug in
+function scrollToScreen(screen) {
+    screenbox.stop().scrollTo(screen, 300);
+}
+
+$('.step')
+    .hover(
+        // scroll to screenshot when user hovers over a step
+        function() {
+            var screen = findStepScreen(this);
+            if (!screen) return;
+            scrollToScreen(screen);
+        },
+        // do nothing on the hover out, or else you'll a get bunch of annoying
+        // animations because the steps are all stacked together and moving the
+        // mouse will cause tons of hover in and out events
+        function() {}
+    )
+    // when a step is clicked, save that so when the hover out happens, the
+    // screenshot will slide back to the last selected one. this makes it easier
+    // to select a pic to examine more carefully
+    .click(function() {
+        screen = findStepScreen(this);
+        if (!screen) return;
+        selected = screen;
+
+        // remove all the info classes, inefficient, but works
+        $('.step.info').removeClass('info');
+        $('.screenshot.selected').removeClass('selected');
+
+        // mark the new step and screens as 'selected'
+        $(this).addClass('info');
+        $(selected).addClass('selected');
+
+        // and scroll to it for good measure!
+        scrollToScreen(selected);
+    })
+;
+
+$('.steps')
+    .hover(
+        // we dont care about hte hover in event
+        function() {},
+        // this is where we slide back to the last selected step/screen, if avail
+        function() { scrollToScreen(selected); }
+    )
+;
+
+// enable the tooltip-like popovers that show screenshots when you hover over steps
+$('.screenshot-popover')
+    .popover({
+        'trigger': 'hover',
+        'placement': 'right',
+        'title': 'Screenshot',
+        'html': true,
+    })
+;
+
+{% if test_run.status == 'running' %}
+// if the test is still running, auto scroll to the latest image
+var last_step = $('.step[alt=passed], .step[alt=failed]').last();
+if (last_step) {
+    // doing this too fast will prevent the scroll from working
+    // so wait a bit after page load to fire the fake click
+    setTimeout(function() { last_step.click(); }, 500);
+}
+{% endif %}
+
+});
+</script>
+{% endblock %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+{% if test %}
+    <div class="row">
+        <h2>Scenario: {{ test.name }}</h2>
+    </div>
+
+    {% if test_run %}
+        <h3>Test Run Status</h3>
+        <div class="row">
+            <div class='alert {{ test_run_status }}'>
+                {% if queue_position %}
+                    <h3>{{ test_run.status }} - Your test is {{ queue_position }} in the queue.</h3>
+                {% else %}
+                    <h3>{{ test_run.status }}</h3>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class='steps'>
+            {% for set_number, steps in step_sets.items %}
+                <table class='table table-hover'>
+                    <tr><th>Steps</th></tr>
+                    {% for step in steps %}
+                        <tr class='step mono {{ step.css_class }} screenshot-popover' pair_id='{{ step.pair_id }}' alt='{{ step.status }}' data-content='<img class="popover-screenshot" src="{{ step.screenshot_url }}" />'>
+                            <td>
+                                {{ step.text }}
+                                {% if step.pair_id %}
+                                    <img alt='Has screenshot' src='{% static 'django_bdd/img/has_screenshot.png' %}' class='screen_icon' title='Has screenshot'/>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endfor %}
+            <!-- some icon legends and stuff -->
+            <div class='legend'>Step has a screenshot <img src='{% static 'django_bdd/img/has_screenshot.png' %}' class='screen_icon'/></div>
+        </div>
+
+        <!-- only output screenshots if we got any! -->
+        <div class="screenshots {{ screenshots|yesno:',no_screens' }}">
+            {% if screenshots %}
+                {% for screenshot in screenshots %}
+                <div class="screenshot" pair_id='{{ screenshot.pair_id }}'>
+                    <div class="thumbnail">
+                        <a href="{{ screenshot.url }}" target="_blank">
+                            <img src="{{ screenshot.url }}"/>
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <center>No screenshots</center>
+            {% endif %}
+        </div>
+
+        {% if test_run.status != 'failed' %}
+            <h4 class="info">Test Info</h4>
+            <!-- put into a table, i just find it easier to read -->
+            <table class="table table-hover info mono">
+                <!-- mark all failure rows as danger so they stand out as failure text -->
+                {% for line in test_run.text %}
+                    <!-- ignore empty lines -->
+                    {% if line %}
+                        <tr class="info"><td>{{ line }}</td></tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        {% elif test_run.status == 'failed' %}
+            <h4 class="failure">Failure Info</h4>
+            <!-- put into a table, i just find it easier to read -->
+            <table class='table table-hover failure mono'>
+                <!-- mark all failure rows as danger so they stand out as failure text -->
+                {% for line in test_run.text %}
+                    <!-- ignore empty lines -->
+                    {% if line %}
+                        <tr class='danger'><td>{{ line }}</td></tr>
+                    {% endif %}
+                {% endfor %}
+            </table>
+        {% endif %}
+    {% endif %}
+{% endif %}
+
+<h2>Run History</h2>
+{% render_table table %}
+{% endblock %}

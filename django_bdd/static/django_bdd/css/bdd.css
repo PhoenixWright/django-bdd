@@ -1,0 +1,73 @@
+/**
+ * stuff for bdd step editting in the tiny mce container
+ * http://www.tinymce.com/wiki.php/Configuration3x:content_css
+ */
+/** animate everything! */
+* {
+    -webkit-transition: all 0.3s;
+    -moz-transition: all 0.3s;
+    -o-transition: all 0.3s;
+    transition: all 0.3s;
+}
+
+/** try to use a sans-serif monospace font for steps, since bdd steps kinda
+depend on alignment */
+.mono {
+    font-family: "Lucida Console", Monaco, monospace !important;
+    font-size: 0.9em;
+}
+.mce-content-body p,
+.rte-autocomplete {
+    font-family: "Lucida Console", Monaco, monospace !important;
+    font-size: 1.2em !important;
+}
+
+/** the steps and screenshots are side by side. screenshots to the right. when
+a step is hovered over and a screenshot exists for it, then the screenshots
+'shovler' will scroll to it automatically */
+.steps {
+    display: inline-block;
+    width: 69%;
+    /** i personally find it annoying when some text is interactive but the
+    cursor is the text bar cursor */
+    cursor: default;
+}
+.screenshots {
+    overflow-y: scroll;
+    display: inline-block;
+    width: 30%;
+    height: 30em;
+    vertical-align: top;
+}
+/** if no scerenshots, then collapse this div so it doesnt take space */
+.screenshots.no_screens {
+    height: auto !important;
+    overflow-y: auto !important;
+}
+
+/** box hovers around the screenshots to make them stand out a little better */
+.screenshot {
+    margin: 1em;
+    box-shadow: 0 0 1em rgb(160,160,160);
+}
+.screenshot:hover {
+    box-shadow: 0 0 1.5em rgb(128,128,128);
+}
+.screenshot.selected {
+    box-shadow: 0 0 1.5em rgb(69, 130, 236);
+}
+
+/** used to indicate a step has a screenshot */
+.screen_icon {
+    float: right;
+    width: auto;
+    height: 1.5em;
+    margin: 0;
+    border: 0;
+}
+.legend {
+    text-align: right;
+}
+.legend .screen_icon {
+    float: inherit !important;
+}

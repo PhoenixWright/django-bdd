@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h3>Test Queue</h3>
+<!-- display the summary text, which is something like "there are x tests in the queue" -->
+<blockquote>
+    <p>{{ summary_text }}</p>
+    {% if not test_runs %}
+        <small>But you can start one <a href="{% url "bdd-test-list" %}">here</a>.</small>
+    {% endif %}
+</blockquote>
+
+{% if test_runs %}
+    <table class="table table-hover">
+        <tr>
+            <th>Test Run ID</th>
+            <th>User</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>View</th>
+
+            {% for test_run in test_runs %}
+                <!-- highlight the row if the test run belongs to the current user -->
+                <tr class="{% if test_run.user == current_user %}info{% endif %}">
+                    <td>{{ test_run.id }}</td>
+                    <td>{{ test_run.user }}</td>
+                    <td>{{ test_run.test.name }}</td>
+                    <td>{{ test_run.status }}</td>
+                    <td><a href="{% url "bdd-test-run-detail" test_id=test_run.test.id test_run_id=test_run.id %}">View</a></td>
+                </tr>
+            {% endfor %}
+        </tr>
+    </table>
+{% endif %}
+
+{% endblock %}

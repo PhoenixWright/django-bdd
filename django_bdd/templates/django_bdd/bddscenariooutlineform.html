@@ -1,0 +1,4 @@
+<form class="form-horizontal" action="{% url "bdd-run-scenario-outline-form-test" test_id=test.id %}" method="post">{% csrf_token %}
+    {{ form.as_p }}
+    <input class="btn btn-primary pull-right" type="submit" value="Run" />
+</form>

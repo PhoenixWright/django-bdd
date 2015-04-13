@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load django_bdd_tags %}
+
+{% block head %}
+<script type="text/javascript">
+    function expandTest(test_id) {
+        console.log('expandTest(' + test_id + ')');
+
+        ajaxGet('/bdd/tests/' + test_id + '/scenario-outline-example-form', function(content) {
+            $('#' + test_id + '_example_form').html(content);
+        });
+
+        // hide all tests
+        $('.collapse.in').collapse('hide');
+
+        // show the test that was clicked
+        $('#' + test_id).collapse('show');
+    }
+
+    function runTest(test_id) {
+        console.log('runTest(' + test_id + ')');
+
+        ajaxGet('/bdd/tests/' + test_id + '/scenario-outline-example-form', function(content) {
+            if (content != null) {
+                expandTest(test_id);
+            }
+            else {
+                // there is no outline form to render, safe to run the test
+                // redirect to the test start url
+                window.location = '/bdd/tests/' + test_id + '/start';
+            }
+        });
+    }
+
+    function createDeleteModal(test_id) {
+        console.log('createDeleteModal(' + test_id + ')');
+
+        ajaxGet('/bdd/tests/' + test_id + '/delete-modal', function(content) {
+            console.log('retrieved modal content, updating content and toggling modal')
+            $('#modal-content').html(content);
+            $('#delete-modal').modal('toggle');
+        });
+    }
+</script>
+<style>
+    /* for displaying things horizontally (like tags) */
+    .inline {
+        display: inline;
+    }
+
+    /* thisll make each test row highlight on mouse over. a subtle effect that
+    makes things easier to see */
+    .test-row, .test-header, .btn {
+        transition: all 0.3s;
+        -o-transition: all 0.3s;
+        -moz-transition: all 0.3s;
+        -webkit-transition: all 0.3s;
+    }
+    .test-row:hover {
+        box-shadow: 0 0 0.4em #eee;
+    }
+    .test-header:hover {
+        background-color: #def;
+    }
+    .test-title {
+        padding-bottom: 1.2em;
+    }
+    .test-title:hover {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block title %}
+{{ title }}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+
+    <!-- Test Column -->
+    <div class="col-md-10">
+        <!-- column header -->
+        <div class="bs-component">
+            <h2>
+                {{ title }}
+                <form class="pull-right" method="link" action="{% url "bdd-new-test" %}">
+                    <input id="create-scenario-button" class="btn btn-primary" type="submit" value="Create">
+                </form>
+            </h2>
+
+        </div>
+
+        <!-- render the test list -->
+        <!-- http://getbootstrap.com/javascript/#transitions -->
+        <div class="panel-group" id="accordion">
+            {% for test in tests %}
+            <!-- begin panel -->
+            <!-- row for a single test -->
+            <div class="panel panel-default test-row">
+                <!-- header of test -->
+                <div class="panel-heading test-header" data-parent="#accordion">
+                    <div class="row">
+                        <div class="col-lg-7 test-title" onclick="expandTest({{ test.id }})" >  <!-- bootstrap uses 12 columns -->
+                            <h4 class="panel-title">
+                                <small>{{ test.user }} - </small>{{ test.name }}
+
+                                <!-- show tags. putting this in the h4 keeps them inline as well as maintains the look of the rows -->
+                                {% for tag_name in test.tags.names %}
+                                    <!-- make the tags display horizontally with class=inline -->
+                                    <!-- use the 'access' filter (in bddtester_tags.py) to pull values out of the label_classes list -->
+                                    <span class="label {{ label_classes|access:forloop.counter }}">{{ tag_name }}</span>
+                                {% endfor %}
+                            </h4>
+                        </div>
+
+                        <!-- test action buttons -->
+                        <div class="col-lg-5">
+                            <div class="btn-group pull-right">
+                                <a class="btn btn-default" onclick="runTest({{ test.id }})"><span class="text-success">Run</span></a>
+                                <a class="btn btn-default" href="{% url "bdd-edit-test" test_id=test.id %}">Edit</a>
+                                <a class="btn btn-default" href="{% url "bdd-test-runs" test_id=test.id %}"><span class="text-primary">View Results</span></a>
+                                <a id="delete-button" class="btn btn-default" data-id="{{ test.id }}" onclick="createDeleteModal({{ test.id }})"><span class="text-danger">Delete</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- expanded content of test -->
+                <!-- this div id refers to the href id in the data-toggle 'a' tag above -->
+                <div id="{{ test.id }}" class="panel-collapse collapse">
+                    <div class="panel-body">
+                        <pre>{{ test.steps }}</pre> <!-- pre will allow newlines to display properly -->
+                        <div id="{{ test.id }}_example_form">
+                          <!-- placeholder for example form if necessary -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- end panel -->
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Tag Column -->
+    <div class="col-md-2">
+        {% include "django_bdd/tags.html" with tag_list=tag_list searched_tags=searched_tags %}
+    </div>
+</div>
+
+<!-- pagination -->
+<div class="center-block">
+    <ul class="pagination pagination-lg">
+        <!-- previous page number -->
+        {% if tests.has_previous %}
+            <li><a href="?page={{ tests.previous_page_number }}">«</a></li>
+        {% else %}
+            <li class="disabled"><a>«</a></li>
+        {% endif %}
+
+        <!-- current page number -->
+        <li class="active"><a href="">{{ tests.number }}</a></li>
+
+        <!-- next page number -->
+        {% if tests.has_next %}
+            <li><a href="?page={{ tests.next_page_number }}">»</a></li>
+        {% else %}
+            <li class="disabled"><a>»</a></li>
+        {% endif %}
+    </ul>
+</div>
+
+{% endblock %}
+
+{% block modal %}
+<div id="delete-modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div id='modal-content' class="modal-content">
+            <!-- content here populated by createDeleteModal() -->
+        </div>
+    </div>
+</div>
+{% endblock %}
